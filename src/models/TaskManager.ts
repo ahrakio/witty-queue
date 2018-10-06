@@ -81,6 +81,7 @@ export class TaskManager {
 			rimraf.sync(extractedTaskDir + '_' + suffix);
 			TaskDirManager.removeSuffix(extractedTaskDir);
 		} else {
+
 			let oldVersionPath = TaskUtils.olderVersionExist(`${payload.sendingServerName}_${payload.taskClassName}`);
 			if (oldVersionPath) {
 				rimraf.sync(oldVersionPath)
