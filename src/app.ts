@@ -1,52 +1,55 @@
-import * as yargs from "yargs";
-import * as http from 'http';
-import {StringDecoder} from "string_decoder";
+import yargs from "yargs";
+import {ProgramArgsManager} from "./configManager/ProgramArgsManager";
 import {PropertyManagerImpl} from "./configManager/PropertyManagerImpl";
-import {ControllerService} from "./controllers/ControllerService";
-import {ControllerPayload} from "./beans/ControllerPayload";
-import {ServerUtils} from "./utils/ServerUtils";
+// .demandOption(['run', 'path'], 'Please provide both run and path arguments to work with this tool')
 
-const appVariables = yargs.argv;
-const prop = new PropertyManagerImpl();
-const portNum = prop.get('portNumber');
+const appVariables = yargs
+	.option('port', {
+		alias: 'p',
+		describe: 'server running port',
+		number: true
+	})
+	.option('appName', {
+		alias: 'n',
+		describe: 'app running name',
+		string: true
+	})
+	.option('appInstances', {
+		alias: 'i',
+		describe: 'number of running instances',
+		number: true
+	})
+	.option('stdOutputPath', {
+		alias: 'o',
+		describe: 'server standard output log',
+		string: true
+	})
+	.option('errorOutputPath', {
+		alias: 'e',
+		describe: 'server error log',
+		string: true
+	})
+	.help()
+	.argv;
 
-const server = http.createServer(function (req, res) {
-	unifiedServer(req, res)
-});
+ProgramArgsManager.getInstance().handleArguments(appVariables);
+const appName = PropertyManagerImpl.getInstance().get('appName');
+const instances = PropertyManagerImpl.getInstance().get('appInstances');
+const output = PropertyManagerImpl.getInstance().get('stdOutputPath');
+const error = PropertyManagerImpl.getInstance().get('errorOutputPath');
 
-server.listen(portNum, function () {
-	console.log(`server listening on port ${portNum}`)
-});
+const {execSync} = require('child_process');
+try {
+	execSync(`pm2 start dist/server.js --name ${appName}
+	  		--instances ${instances} 
+	  		--output ${output}
+	  		 --error ${error} 
+	  		 --log-date-format "YYYY-MM-DD HH:mm Z"tsc
+	  		 `);
+	// execSync('pm2 set --log-type json --log-date-format DD-MM-YYYY');
+	//todo release pm2 in server exit
+	//todo pm2 set pm2-logrotate:<param>
+} catch (e) {
+	console.log(e)
+}
 
-let unifiedServer = function (req, res) {
-
-	const controllerService = new ControllerService();
-	const decoder = new StringDecoder('utf-8');
-	let buffer = '';
-	let response, body;
-	let {path, headers, method, queryString, status, resBody} = ServerUtils.extractInfo(req, res);
-
-	if (status) {
-		res.writeHead(status, resBody)
-	}
-
-	if (headers['content-type'] && headers['content-type'].startsWith('multipart/form-data')) {
-		response = controllerService.handleRequest(path, new ControllerPayload(queryString, headers, buffer, method, path, req));
-		ServerUtils.handelResponse(response, res);
-	} else {
-		req.on('data', function (data) {
-			buffer += decoder.write(data);
-
-			if (buffer.length > 1e6)
-				req.connection.destroy();
-		});
-		req.on('end', function () {
-			buffer += decoder.end();
-			body = JSON.parse(buffer);
-
-			response = controllerService.handleRequest(path, new ControllerPayload(queryString, headers, buffer, method, path, req));
-			res.writeHead(response.status);
-			res.end(JSON.stringify(response.payload || {}));
-		});
-	}
-};
