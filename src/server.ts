@@ -45,3 +45,26 @@ let unifiedServer = function (req, res) {
 		});
 	}
 };
+
+process.on('SIGINT', () => {
+	console.info('SIGINT signal received.')
+	// Stops the server from accepting new connections and finishes existing connections.
+	server.close(function (err) {
+		// if error, log and exit with error (1 code)
+		if (err) {
+			console.error(err)
+			process.exit(1)
+		}
+		// close your database connection and exit with success (0 code)
+	})
+});
+
+process.on('message', (msg) => {
+	if (msg == 'shutdown') {
+		console.log('Closing all connections...')
+		setTimeout(() => {
+			console.log('Finished closing connections')
+			process.exit(0)
+		}, 1500)
+	}
+})
