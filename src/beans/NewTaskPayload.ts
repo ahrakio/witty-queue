@@ -7,6 +7,7 @@ export class NewTaskPayload {
 	private readonly _isTaskExists;
 	private readonly _sendingServerName;
 	private readonly _taskState;
+	private readonly _options;
 
 	get taskState() {
 		return this._taskState;
@@ -35,8 +36,11 @@ export class NewTaskPayload {
 	get fileName() {
 		return this._fileName;
 	}
+	get options() {
+		return this._options;
+	}
 
-	constructor(tasksDirPath, uploadedZipFileName, taskClassName, fileName, isTaskExist, sendingServerName, state) {
+	constructor(tasksDirPath, uploadedZipFileName, taskClassName, fileName, isTaskExist, sendingServerName, state,options) {
 		this._tasksDirPath = tasksDirPath;
 		this._uploadedZipFileName = uploadedZipFileName;
 		this._taskClassName = taskClassName;
@@ -44,6 +48,7 @@ export class NewTaskPayload {
 		this._isTaskExists = isTaskExist;
 		this._sendingServerName = sendingServerName;
 		this._taskState = state;
+		this._options = options;
 	}
 
 }

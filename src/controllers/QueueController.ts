@@ -7,6 +7,11 @@ import {Consts} from "../utils/Consts";
 import {NewTaskPayload} from "../beans/NewTaskPayload";
 import {Types} from "../utils/Types";
 import {controllerResponse} from "./controllerResponse";
+import {ServerUtils} from "../utils/ServerUtils";
+import {Task} from "../models/Task";
+import {TaskRunner} from "../models/TaskRunner";
+import {TaskUtils} from "../utils/TaskUtils";
+import {TaskBean} from "../beans/TaskBean";
 
 const IncomingForm = require('formidable').IncomingForm;
 
@@ -40,31 +45,35 @@ export class QueueController implements Controller {
 		return this.dict[path](payload);
 	}
 
-	private addTask(payload: ControllerPayload): Types.controllerRes {
+	private addTask(payload: ControllerPayload): Promise<controllerResponse> {
 		let {req} = payload;
 		let form = new IncomingForm();
 		form.keepExtensions = true;
 		form.uploadDir = Consts.tasksDirPath;
-		let tempPromise: Promise<controllerResponse> = new Promise(function (resolve, reject) {
+		return new Promise((resolve, reject) => {
 			form.parse(req, function (err, fields, files) {
 				if (err) {
 					console.log('some error', err);
-					reject({status: 404, payload: {}})
 				} else {
-					let file = files.task_zip_file;
-					let fileName = fields.taskFileName;
-					let taskName = fields.taskClassName;
-					let sendingServerName = fields.serverName;
-					let isTaskExist = fields.isTaskExist === 'true';
-					let state = fields.taskState;
-					let temp = file ? file.path.split(sep) : undefined;
-					let name = temp ? temp[temp.length - 1] : undefined;
-					let response = TaskManager.handleNewTask(new NewTaskPayload(Consts.tasksDirPath, name, taskName, fileName, isTaskExist, sendingServerName, state));
-					resolve(response);
+					let {file, fileName, taskName, sendingServerName, isTaskExist, state, uploadZipName, options} = ServerUtils.extractTaskData(files, fields);
+					let taskPromise = TaskManager.createNewTask(new NewTaskPayload(Consts.tasksDirPath, uploadZipName, taskName, fileName, isTaskExist, sendingServerName, state, options));
+					taskPromise.then((task: Types.taskCreationDataRes) => {
+						TaskManager.runTask(resolve, reject, task, options, isTaskExist, uploadZipName);
+					}).catch(err => {
+						console.log('here test');
+						reject({
+							status: 500,
+							payload: {
+								sendResult: options.receiveFeedback,
+								success: false,
+								Attempts: 0,
+								message: 'failed to create task' + err
+							}
+						});
+						TaskUtils.cleanAfterNewTask(Consts.tasksDirPath + sep + uploadZipName);
+					});
 				}
 			});
-		});
-		return Promise.resolve(tempPromise);
+		})
 	}
-
 }

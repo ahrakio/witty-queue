@@ -3,6 +3,7 @@ import {Consts} from "./Consts";
 import {sep} from "path";
 import {TaskDirManager} from "../models/TaskDirManager";
 import * as fs from "fs";
+import {unlinkSync} from "fs";
 
 const extract = require('extract-zip');
 
@@ -35,4 +36,9 @@ export class TaskUtils {
 		}
 		return null;
 	}
+
+	public static cleanAfterNewTask(zipPath) {
+		unlinkSync( zipPath)
+	}
+
 }

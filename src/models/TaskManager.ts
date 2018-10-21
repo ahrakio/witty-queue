@@ -8,12 +8,13 @@ import {Consts} from "../utils/Consts";
 import {unlinkSync} from "fs";
 import {Types} from "../utils/Types";
 import {TaskDirManager} from "./TaskDirManager";
+import {TaskRunner} from "./TaskRunner";
 
 const rimraf = require('rimraf');
 
 export class TaskManager {
 
-	public static handleNewTask(payload: NewTaskPayload): Types.controllerRes {
+	public static createNewTask(payload: NewTaskPayload): Types.taskCreationPromiseRes {
 
 		let tasksDir = Consts.tasksDirPath;
 		if (!fs.existsSync(tasksDir)) {
@@ -26,20 +27,20 @@ export class TaskManager {
 
 		if (!payload.isTaskExists) {
 			this.handelNewTaskFolderCreation(bean, extractedTaskDir, payload);
-			return new Promise(function (resolve, reject) {
-				TaskUtils.extractTaskZip(payload)
-					.then(success => {
-						if (success) {
-							TaskManager.createAndRunTask(bean);
-							unlinkSync(payload.tasksDirPath + sep + payload.uploadedZipFileName);
-							resolve({status: 200, payload: {}});
-						}
-					})
-					.catch(err => {
-						console.log('error extracting files');
-						reject({status: 500, payload: {}});
-					});
-			})
+			let resolveExtraction = Promise.resolve(TaskUtils.extractTaskZip(payload));
+			return Promise.resolve<Task | null>((Promise.resolve(
+				resolveExtraction.then(result => {
+					if (result) {
+						return Promise.resolve(TaskManager.createTask(bean));
+					} else {
+						return Promise.resolve(null);
+					}
+				})
+			))).catch(err => {
+				return new Promise((resolve, reject) => {
+					reject(null)
+				})
+			});
 		} else {
 			if (TaskDirManager.getDirSuffix(extractedTaskDir)) {
 				bean.taskPath = bean.taskPath + '_' + TaskDirManager.getDirSuffix(extractedTaskDir) + sep + payload.fileName;
@@ -49,21 +50,17 @@ export class TaskManager {
 					bean.taskPath = oldV + sep + payload.fileName;
 				}
 			}
-			this.createAndRunTask(bean);
-			return {status: 200, payload: {}};
+			return this.createTask(bean);
 		}
 	}
 
-	private static createAndRunTask(taskInfo: TaskBean) {
-		import(taskInfo.taskPath).then(task => {
-			let instance: Task = new task[taskInfo.className]();
-			if (taskInfo.isExist) {
-				this.setClassState(instance, taskInfo.taskState)
-			}
-			instance.run();
-		}).catch(err => {
-			console.error('error creating task');
-		});
+	private static async createTask(taskInfo: TaskBean): Types.taskCreationPromiseRes {
+		let task = await import(taskInfo.taskPath);
+		let instance: Task = new task[taskInfo.className]();
+		if (taskInfo.isExist && instance) {
+			this.setClassState(instance, taskInfo.taskState)
+		}
+		return instance;
 	}
 
 	private static setClassState(task: Task, state: any) {
@@ -89,5 +86,35 @@ export class TaskManager {
 		let fullPath = extractedTaskDir + '_' + TaskDirManager.addDirSuffix(extractedTaskDir);
 		fs.mkdirSync(fullPath);
 		bean.taskPath = fullPath + sep + payload.fileName;
+	}
+
+	public static runTask(resolve, reject, task, options, isTaskExist, uploadZipName) {
+		if (task) {
+			let message, success, attempts, status, reSendTask;
+			if (task) {
+				let runRes = TaskRunner.runTask(task, options);
+				status = 200;
+				message = 'successfully executed the task';
+				attempts = runRes.Attempts;
+				success = runRes.success;
+			} else if (isTaskExist) {
+				reSendTask = true;
+				success = false;
+				status = 500;
+				message = 'send task again';
+				attempts = 0;
+			}
+			resolve({
+				status: status,
+				payload: {
+					success: success,
+					Attempts: attempts,
+					reSendTask: reSendTask,
+					sendFeedback: options.receiveFeedback,
+					message: message
+				}
+			});
+			TaskUtils.cleanAfterNewTask(Consts.tasksDirPath + sep + uploadZipName);
+		}
 	}
 }

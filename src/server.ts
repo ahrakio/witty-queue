@@ -20,7 +20,7 @@ let unifiedServer = function (req, res) {
 	const decoder = new StringDecoder('utf-8');
 	let buffer = '';
 	let response, body;
-	let {path, headers, method, queryString, status, resBody} = ServerUtils.extractInfo(req, res);
+	let {path, headers, method, queryString, status, resBody} = ServerUtils.extractRequestInfo(req, res);
 
 	if (status) {
 		res.writeHead(status, resBody)
@@ -52,7 +52,7 @@ process.on('SIGINT', () => {
 	server.close(function (err) {
 		// if error, log and exit with error (1 code)
 		if (err) {
-			console.error(err)
+			console.error(err);
 			process.exit(1)
 		}
 		// close your database connection and exit with success (0 code)
@@ -67,4 +67,4 @@ process.on('message', (msg) => {
 			process.exit(0)
 		}, 1500)
 	}
-})
+});

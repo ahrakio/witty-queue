@@ -2,6 +2,7 @@ export class TaskBean {
 	set taskPath(value) {
 		this._taskPath = value;
 	}
+
 	get taskState() {
 		return this._taskState;
 	}
@@ -10,18 +11,24 @@ export class TaskBean {
 		return this._isExist;
 	}
 
+	get options() {
+		return this._options;
+	}
+
 	private readonly _className;
 	private readonly _fileName;
 	private _taskPath;
 	private readonly _isExist;
 	private readonly _taskState;
+	private readonly _options;
 
-	constructor(className: string, fileName: string, taskPath: string, isExist: boolean, taskState: any) {
+	constructor(className: string, fileName: string, taskPath: string, isExist: boolean, taskState: any, options = {}) {
 		this._className = className;
 		this._fileName = fileName;
 		this._taskPath = taskPath;
 		this._isExist = isExist;
 		this._taskState = taskState;
+		this._options = options;
 	}
 
 	get className() {
