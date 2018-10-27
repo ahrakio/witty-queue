@@ -1,5 +1,6 @@
 import {ArgumentCommandManager} from "../cli/ArgumentCommandManager";
 import {PropertyManagerImpl} from "./PropertyManagerImpl";
+import yargs from "yargs";
 
 export class ProgramArgsManager {
 
@@ -25,4 +26,36 @@ export class ProgramArgsManager {
 		}
 	}
 
+	public getProgramArguments() {
+		return yargs
+			.option('port', {
+				alias: 'p',
+				describe: 'server running port',
+				number: true
+			})
+			.option('appName', {
+				alias: 'n',
+				describe: 'app running name',
+				string: true
+			})
+			.option('appInstances', {
+				alias: 'i',
+				describe: 'number of running instances',
+				number: true
+			})
+			.option('stdOutputPath', {
+				alias: 'o',
+				describe: 'server standard output log',
+				string: true
+			})
+			.option('errorOutputPath', {
+				alias: 'e',
+				describe: 'server error log',
+				string: true
+			})
+			.help()
+			.showHelpOnFail(true)
+			.argv;
+		// .demandOption(['run', 'path'], 'Please provide both run and path arguments to work with this tool')
+	}
 }

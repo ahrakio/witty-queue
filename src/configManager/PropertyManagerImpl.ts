@@ -9,7 +9,7 @@ export class PropertyManagerImpl implements PropertyManager {
 
 	private static instance: PropertyManagerImpl;
 	private properties = PropertiesReader(`${process.cwd()}${sep}config.ini`);
-	private config;
+	private readonly config;
 
 	private constructor() {
 		this.config = ini.parse(fs.readFileSync(`${process.cwd()}${sep}config.ini`, 'utf-8'))
@@ -27,9 +27,9 @@ export class PropertyManagerImpl implements PropertyManager {
 	}
 
 	set(key: string, value: string | number | boolean) {
-		if(this.config[key] === typeof Array){
+		if (this.config[key] === typeof Array) {
 			this.config.push(value);
-		}else{
+		} else {
 			this.config[key] = value;
 		}
 		fs.writeFileSync('./config.ini', ini.stringify(this.config));

@@ -4,7 +4,7 @@ import {QueueController} from "./QueueController";
 import {NotFoundController} from "./NotFoundController";
 import {Types} from "../utils/Types";
 
-export class ControllerService {
+export class ControllersService {
 
 	private readonly dict: { [path: string]: Controller };
 	private readonly notFound: Controller;

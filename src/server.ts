@@ -1,7 +1,7 @@
 import * as http from 'http';
 import {StringDecoder} from "string_decoder";
 import {PropertyManagerImpl} from "./configManager/PropertyManagerImpl";
-import {ControllerService} from "./controllers/ControllerService";
+import {ControllersService} from "./controllers/ControllersService";
 import {ControllerPayload} from "./beans/ControllerPayload";
 import {ServerUtils} from "./utils/ServerUtils";
 
@@ -16,19 +16,29 @@ server.listen(portNum, function () {
 });
 
 let unifiedServer = function (req, res) {
-	const controllerService = new ControllerService();
+	const controllerService = new ControllersService();
 	const decoder = new StringDecoder('utf-8');
 	let buffer = '';
 	let response, body;
 	let {path, headers, method, queryString, status, resBody} = ServerUtils.extractRequestInfo(req, res);
 
 	if (status) {
-		res.writeHead(status, resBody)
+		res.writeHead(status);
+		res.end(JSON.stringify(resBody));
 	}
 
 	if (headers['content-type'] && headers['content-type'].startsWith('multipart/form-data')) {
 		response = controllerService.handleRequest(path, new ControllerPayload(queryString, headers, buffer, method, path, req));
-		ServerUtils.handelResponse(response, res);
+		if (ServerUtils.isPromise(response)) {
+			response.then(data => {
+				ServerUtils.sendResponse(data, res);
+			}).catch(err => {
+				console.error(err);
+				ServerUtils.sendResponse(err, res);
+			});
+		} else {
+			ServerUtils.handelResponse(response, res);
+		}
 	} else {
 		req.on('data', function (data) {
 			buffer += decoder.write(data);
@@ -47,21 +57,18 @@ let unifiedServer = function (req, res) {
 };
 
 process.on('SIGINT', () => {
-	console.info('SIGINT signal received.')
-	// Stops the server from accepting new connections and finishes existing connections.
+	console.info('SIGINT signal received.');
 	server.close(function (err) {
-		// if error, log and exit with error (1 code)
 		if (err) {
 			console.error(err);
 			process.exit(1)
 		}
-		// close your database connection and exit with success (0 code)
 	})
 });
 
 process.on('message', (msg) => {
 	if (msg == 'shutdown') {
-		console.log('Closing all connections...')
+		console.log('Closing all connections...');
 		setTimeout(() => {
 			console.log('Finished closing connections')
 			process.exit(0)

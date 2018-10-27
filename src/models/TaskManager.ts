@@ -89,32 +89,31 @@ export class TaskManager {
 	}
 
 	public static runTask(resolve, reject, task, options, isTaskExist, uploadZipName) {
+		let message, success, attempts, status, sendFeedback, reSendTask;
 		if (task) {
-			let message, success, attempts, status, reSendTask;
-			if (task) {
-				let runRes = TaskRunner.runTask(task, options);
-				status = 200;
-				message = 'successfully executed the task';
-				attempts = runRes.Attempts;
-				success = runRes.success;
-			} else if (isTaskExist) {
-				reSendTask = true;
-				success = false;
-				status = 500;
-				message = 'send task again';
-				attempts = 0;
-			}
-			resolve({
-				status: status,
-				payload: {
-					success: success,
-					Attempts: attempts,
-					reSendTask: reSendTask,
-					sendFeedback: options.receiveFeedback,
-					message: message
-				}
-			});
-			TaskUtils.cleanAfterNewTask(Consts.tasksDirPath + sep + uploadZipName);
+			let runRes = TaskRunner.runTask(task, options);
+			status = 200;
+			message = runRes.success ? 'successfully executed the task' : 'failed to run tasks';
+			attempts = runRes.Attempts;
+			success = runRes.success;
+		} else if (isTaskExist) {
+			sendFeedback = true;
+			reSendTask = true;
+			success = false;
+			status = 500;
+			message = 'send task again';
+			attempts = 0;
 		}
+		resolve({
+			status: status,
+			payload: {
+				success: success,
+				Attempts: attempts,
+				reSendTask: reSendTask,
+				sendFeedback: sendFeedback || options.receiveFeedback,
+				message: message
+			}
+		});
+		TaskUtils.cleanAfterNewTask(Consts.tasksDirPath + sep + uploadZipName);
 	}
 }

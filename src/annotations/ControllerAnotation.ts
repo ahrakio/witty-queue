@@ -1,4 +1,4 @@
-
 export function ControllerImpl<T>() {
-	return (constructor: T) => {}
+	return (constructor: T) => {
+	}
 }

@@ -1,6 +1,5 @@
 import {sep} from "path";
 
-
 export class Consts {
 	static get tasksDirPath(): string {
 		return this._tasksDirPath;
